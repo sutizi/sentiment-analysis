@@ -13,8 +13,8 @@ from sklearn.metrics import accuracy_score
 def guardar(clf, name):
     with open(name, 'wb') as fp:
             c.dump(clf, fp)
-	    print "El clasificador fue guardado"
-		
+    print("El clasificador fue guardado")
+
 def cargar_archivos():
 	direc = "data_set/"
 	files = os.listdir(direc)
@@ -38,7 +38,7 @@ def cargar_archivos():
 t, s, r = cargar_archivos()
 
 
-vectorizer = CountVectorizer(analyzer = 'word', lowercase = False,)
+vectorizer = CountVectorizer()
 
 features = vectorizer.fit_transform(t)
 
@@ -53,6 +53,6 @@ clf = clf.fit(X=f_train, y=l_train)
 
 preds = clf.predict(f_test)
 
-print "ACCURACY:", accuracy_score(l_test, preds)
+print ("ACCURACY:", accuracy_score(l_test, preds))
 
 guardar(clf, "clasificador.mdl")
