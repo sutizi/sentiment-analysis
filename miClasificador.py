@@ -3,6 +3,12 @@
 import os
 import numpy as np
 
+
+from nltk.corpus import stopwords
+from nltk import TweetTokenizer
+from nltk.stem import SnowballStemmer
+from string import punctuation
+
 #Palabra del lexico y su clasificacion
 class Palabra:
 	def __init__(self, palabra, anger, fear, joy, sadness):
@@ -26,7 +32,23 @@ def cargar_palabras():
 		l = x.split('	')
 		# [palabra, anger, fear, joy, sadness]
 		if (l[4] != '0' or l[7] != '0' or l[8] != '0' or l[9] != '0'):
-			clasificacion.append(Palabra(l[1], int(l[4]), int(l[7]), int(l[8]), int(l[9])))
+			s = stemmer.stem(l[1])
+			clasificacion.append(Palabra(s, int(l[4]), int(l[7]), int(l[8]), int(l[9])))
+	fp.close()
+	clasificacion_emojis = cargar_emojis()
+	return clasificacion + clasificacion_emojis
+
+def cargar_emojis():
+	direc = "data_set/"
+	archivo = direc + 'emojis_clasificacion.txt'
+	clasificacion = [] 
+	fp = open(archivo, "r")
+	lineas = fp.readlines()[1:]
+	for x in lineas:
+		l = x.split('	')
+		# [palabra, anger, fear, joy, sadness]
+		if (l[4] != '0' or l[7] != '0' or l[8] != '0' or l[9] != '0'):
+			clasificacion.append(Palabra(l[0], int(l[4]), int(l[7]), int(l[8]), int(l[9])))
 	fp.close()
 	return clasificacion
 
@@ -39,10 +61,27 @@ def cargar_twitts():
 		fp = open(a, "r")
 		lineas = fp.readlines()[1:]
 		for x in lineas:
-			twitts.append([x.split('	')[1], x.split('	')[2]])
+			palabras = ''.join([c for c in x.split('	')[1] if c not in non_words])
+			tt = TweetTokenizer()
+			twitt = tt.tokenize(palabras)
+			twitts.append([twitt, x.split('	')[2]])
 	fp.close()
 
 	return twitts
+
+#Stems
+
+spanish_stopwords = stopwords.words('spanish')
+stemmer = SnowballStemmer('spanish', ignore_stopwords=True)
+non_words = list(punctuation)
+non_words.extend(['¿', '¡'])
+non_words.extend(map(str,range(10)))
+
+def stem_tokens(tokens, stemmer):
+    stemmed = []
+    for item in tokens:
+        stemmed.append(stemmer.stem(item))
+    return stemmed
 	
 def switch_sentimiento(arg):
     switcher = {
@@ -68,7 +107,7 @@ if __name__ == "__main__":
 	no_clasificada = 0
 
 	for t in twitts:
-		ps = t[0].split(' ')
+		ps = stem_tokens(t[0], stemmer)
 
 		#Contiene la calsificacion de todas las palabras del twitt
 		#[anger, fear, joy, sadness]
