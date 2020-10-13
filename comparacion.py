@@ -19,6 +19,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import LinearSVC
 from sklearn.linear_model import SGDClassifier
+from sklearn.neural_network import MLPClassifier
 
 from ClfSwitcher import ClfSwitcher
 
@@ -58,11 +59,11 @@ pipeline = Pipeline([
     ('clf', ClfSwitcher()),
 ])
 # Aqui definimos el espacio de parametros a explorar
+
 parameters = [
     {
     
     #TODO: 
-    #Agregar clasificador basado en una red neuronal
     #Recuperar informacion: porcentaje de certidumbre en cada clasifcador/ disribucion (bayesianos)
 
     #Support Vector Classification
@@ -78,26 +79,24 @@ parameters = [
     'vect__ngram_range': ((1, 1), (1, 2)),  # unigramas o bigramas
     'clf__estimator__C': (0.2, 0.5, 0.7),
     'clf__estimator__max_iter': (300,  500),
-    
-},
-{
+    },
+    {
+        'clf__estimator': [MLPClassifier()],
+        'clf__estimator__solver': ['lbfgs'],
+    },
+    {
         'clf__estimator': [MultinomialNB()],
         'clf__estimator__alpha': (0.9, 1),#(1e-2, 1e-3, 1e-1),
-},
-
+    },
     {
         'clf__estimator': [SGDClassifier()],
         'clf__estimator__tol': [1e-4], #Tolerance for stopping criteria
     },
-
     {
         'clf__estimator': [LogisticRegression()],
         'clf__estimator__penalty': ['none'],
-
-    }
-
+    },
 ]
-
 
 def cargar_archivos():
 	direc = "data_set/"
