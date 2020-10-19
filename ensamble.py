@@ -17,14 +17,18 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import VotingClassifier
 
-#tokenize
-#TODO usar stems
+#TODO tokenize
 
 #Remove stop words from tweets
-def remove_stop_words(x):
-    for t in x:
+def remove_stop_words(df_tweets):
+    c = 0
+    tweets = []
+    for t in df_tweets:
         palabras = t.split(' ')
-        t = [word for word in palabras if word not in stopwords.words('spanish')]
+        filtradas = [word for word in palabras if word not in stopwords.words('spanish')]
+        str = ""
+        tweets.append(str.join(filtradas))
+    return tweets
 
 
 #read in the dataset
@@ -38,13 +42,10 @@ for filename in files:
 
 df = pd.concat(li)
 
-#stems df[1]
-
-
 df.columns = ['id', 'Tweet', 'AffectDimension', 'IntensityScore']
 df = df.drop(columns=['id', 'IntensityScore'])
 
-remove_stop_words(df['Tweet'])
+df['Tweet'] = remove_stop_words(df['Tweet'])
 
 #label encode the values before passing the features in the dataset.
 le = LabelEncoder()
@@ -53,6 +54,9 @@ for i in range(2):
 
 X = df['Tweet']
 y = df['AffectDimension']
+
+print(len(X))
+print(len(y))
 
 X_train, X_test, y_train, y_test = train_test_split(X, y,  test_size = 0.2, stratify=y)
 
