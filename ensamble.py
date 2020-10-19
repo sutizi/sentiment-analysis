@@ -8,6 +8,7 @@ import pickle as c
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
+from nltk.corpus import stopwords
 
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
@@ -15,6 +16,16 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import VotingClassifier
+
+#tokenize
+#TODO usar stems
+
+#Remove stop words from tweets
+def remove_stop_words(x):
+    for t in x:
+        palabras = t.split(' ')
+        t = [word for word in palabras if word not in stopwords.words('spanish')]
+
 
 #read in the dataset
 path = r'data_set'
@@ -27,8 +38,13 @@ for filename in files:
 
 df = pd.concat(li)
 
+#stems df[1]
+
+
 df.columns = ['id', 'Tweet', 'AffectDimension', 'IntensityScore']
 df = df.drop(columns=['id', 'IntensityScore'])
+
+remove_stop_words(df['Tweet'])
 
 #label encode the values before passing the features in the dataset.
 le = LabelEncoder()
