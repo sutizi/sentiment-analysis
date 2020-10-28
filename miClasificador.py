@@ -141,8 +141,6 @@ if __name__ == "__main__":
 	print("correctos: " + str(correctos))
 	print("incorrectos: " + str(incorrectos))
 	print("------------------------------------------------------------")
-	print("Total palabras" + str(cant_palabras))
-	print("Palabras no clasificadas" + str(no_clasificada))
+	print("Total palabras: " + str(cant_palabras))
+	print("Palabras no clasificadas: " + str(no_clasificada))
 	print("------------------------------------------------------------")
-
-

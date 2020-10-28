@@ -9,6 +9,9 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from nltk.corpus import stopwords
+from nltk import word_tokenize
+from nltk.stem import SnowballStemmer
+from string import punctuation
 
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
@@ -17,11 +20,39 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import VotingClassifier
 
-#TODO tokenize
+# tokenize
+
+def stem_tokens(tokens, stemmer):
+    stemmed = []
+    for item in tokens:
+        stemmed.append(stemmer.stem(item))
+    return stemmed
+
+def tokenize(text):
+
+    non_words = list(punctuation)
+    non_words.extend(['¿', '¡'])
+    stemmer = SnowballStemmer('spanish', ignore_stopwords=True)
+
+    tweets = []
+    for t in text:
+        palabras = t.split(' ')
+        text = ''.join([c for c in palabras if c not in non_words])
+        tokens =  word_tokenize(text)
+        # stem
+        try:
+            stems = stem_tokens(tokens, stemmer)
+        except Exception as e:
+            print(e)
+            print(text)
+            stems = ''
+        str = ""
+        tweets.append(str.join(stems))
+    print(len(tweets))
+    return tweets
 
 #Remove stop words from tweets
 def remove_stop_words(df_tweets):
-    c = 0
     tweets = []
     for t in df_tweets:
         palabras = t.split(' ')
@@ -47,6 +78,8 @@ df = df.drop(columns=['id', 'IntensityScore'])
 
 df['Tweet'] = remove_stop_words(df['Tweet'])
 
+df['Tweet'] = tokenize(df['Tweet'])
+
 #label encode the values before passing the features in the dataset.
 le = LabelEncoder()
 for i in range(2):
@@ -55,8 +88,6 @@ for i in range(2):
 X = df['Tweet']
 y = df['AffectDimension']
 
-print(len(X))
-print(len(y))
 
 X_train, X_test, y_train, y_test = train_test_split(X, y,  test_size = 0.2, stratify=y)
 
@@ -64,7 +95,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y,  test_size = 0.2, stra
 knn = KNeighborsClassifier()
 
 #create a dictionary of all values we want to test for n_neighbors
-params_knn = {'n_neighbors': np.arange(15, 25), 'algorithm': ['auto'], 'leaf_size': np.arange(1, 18), 'p': [1,2], 'n_jobs': [-1]}
+params_knn = {'n_neighbors': np.arange(15, 25), 'algorithm': ['auto'], 'leaf_size': np.arange(1, 18), 'p': [1,2], 'n_jobs': [-1], 'weights': ['uniform', 'distance']}
 
 #use gridsearch to test all values for n_neighbors
 knn_gs = GridSearchCV(knn, params_knn, cv=5)
