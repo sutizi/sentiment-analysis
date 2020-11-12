@@ -35,9 +35,8 @@ def tokenize(text):
     stemmer = SnowballStemmer('spanish', ignore_stopwords=True)
 
     tweets = []
-    for t in text:
-        palabras = t.split(' ')
-        text = ''.join([c for c in palabras if c not in non_words])
+    for palabras in text:
+        text = ''.join([c+" " for c in palabras if c not in non_words])
         tokens =  word_tokenize(text)
         # stem
         try:
@@ -46,29 +45,31 @@ def tokenize(text):
             print(e)
             print(text)
             stems = ''
-        str = ""
-        tweets.append(str.join(stems))
-    print(len(tweets))
+        tweets.append(stems)
     return tweets
 
 #Remove stop words from tweets
 def remove_stop_words(df_tweets):
     tweets = []
     for t in df_tweets:
+    
         palabras = t.split(' ')
-        filtradas = [word for word in palabras if word not in stopwords.words('spanish')]
-        str = ""
-        tweets.append(str.join(filtradas))
+        
+        filtradas = ([word for word in palabras if word not in stopwords.words('spanish')])
+        #tweets.append(str.join(filtradas))
+        tweets.append(filtradas)
     return tweets
 
 
+
+print("run")
 #read in the dataset
 path = r'data_set'
 files = glob.glob(path + "/2018-EI-reg-Es*.txt")
 li = []
 
 for filename in files:
-    df = pd.read_csv(filename,  sep = "	", header=None, skiprows=1)
+    df = pd.read_csv(filename,  sep = "\t", header=None, skiprows=1)
     li.append(df)
 
 df = pd.concat(li)
@@ -77,19 +78,23 @@ df.columns = ['id', 'Tweet', 'AffectDimension', 'IntensityScore']
 df = df.drop(columns=['id', 'IntensityScore'])
 
 df['Tweet'] = remove_stop_words(df['Tweet'])
-
 df['Tweet'] = tokenize(df['Tweet'])
 
-#label encode the values before passing the features in the dataset.
 le = LabelEncoder()
+
+df = df.apply(lambda col: le.fit_transform(col.astype(str)), axis=0, result_type='expand')
+
+#label encode the values before passing the features in the dataset.
 for i in range(2):
-    df.iloc[:,i] = le.fit_transform(df.iloc[:,i])
+   df.iloc[:,i] = le.fit_transform(df.iloc[:,i])
 
 X = df['Tweet']
 y = df['AffectDimension']
 
 
+
 X_train, X_test, y_train, y_test = train_test_split(X, y,  test_size = 0.2, stratify=y)
+
 
 #create new a knn model
 knn = KNeighborsClassifier()
@@ -101,8 +106,9 @@ params_knn = {'n_neighbors': np.arange(15, 25), 'algorithm': ['auto'], 'leaf_siz
 knn_gs = GridSearchCV(knn, params_knn, cv=5)
 
 # convert x into 2D matrix
-X_train = X_train.values.reshape(-1,1)
+X_train = X_train.values.reshape(-1, 1)
 X_test = X_test.values.reshape(-1,1)
+
 
 knn_gs.fit(X_train, y_train)
 
