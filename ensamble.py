@@ -1,160 +1,126 @@
-#!usr/bin/env python3
-
-import os
-import numpy as np
 import pandas as pd
-import glob
-import pickle as c
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
-from nltk.corpus import stopwords
-from nltk import word_tokenize
-from nltk.stem import SnowballStemmer
-from string import punctuation
-
-from sklearn.model_selection import GridSearchCV
+import numpy as np
+import nltk
+from nltk.stem import WordNetLemmatizer
+import sklearn
+from nltk.classify.scikitlearn import SklearnClassifier
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import LabelEncoder
-from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import SGDClassifier
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.svm import SVC
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 from sklearn.ensemble import VotingClassifier
-
-# tokenize
-
-def stem_tokens(tokens, stemmer):
-    stemmed = []
-    for item in tokens:
-        stemmed.append(stemmer.stem(item))
-    return stemmed
-
-def tokenize(text):
-
-    non_words = list(punctuation)
-    non_words.extend(['¿', '¡'])
-    stemmer = SnowballStemmer('spanish', ignore_stopwords=True)
-
-    tweets = []
-    for palabras in text:
-        text = ''.join([c+" " for c in palabras if c not in non_words])
-        tokens =  word_tokenize(text)
-        # stem
-        try:
-            stems = stem_tokens(tokens, stemmer)
-        except Exception as e:
-            print(e)
-            print(text)
-            stems = ''
-        tweets.append(stems)
-    return tweets
-
-#Remove stop words from tweets
-def remove_stop_words(df_tweets):
-    tweets = []
-    for t in df_tweets:
-    
-        palabras = t.split(' ')
-        
-        filtradas = ([word for word in palabras if word not in stopwords.words('spanish')])
-        #tweets.append(str.join(filtradas))
-        tweets.append(filtradas)
-    return tweets
+import re
+import string
+from nltk.corpus import stopwords
+from nltk.corpus import wordnet
+from collections import Counter
+from nltk.tokenize import word_tokenize
+from sklearn import model_selection
+from sklearn.tree import DecisionTreeClassifier
+from sklearn. ensemble import RandomForestClassifier, BaggingClassifier, AdaBoostClassifier, VotingClassifier
+from sklearn.svm import LinearSVC
+from sklearn.neural_network import MLPClassifier
 
 
+def clean_text(text):
+    '''Make text lowercase, remove text in square brackets, remove punctuation and remove words containing numbers.'''
+    text = re.sub(r'\w*\d\w*', '', text)
+    text = re.sub(r'\w*\f\w*', '', text)
+    text = re.sub(r'\(.*?\)', '', text)
+    text = re.sub(r'\[.*]\)', '', text)
+    text = text.lower()
+    text = re.sub('[‘’“”…]', '', text)
+    text = re.sub('\n', '', text)
+    text = re.sub('\t', '', text)
+    text = re.sub('[%s]' % re.escape(string.punctuation), '', text)
+    return text
 
-print("run")
-#read in the dataset
-path = r'data_set'
-files = glob.glob(path + "/2018-EI-reg-Es*.txt")
-li = []
+#Remove spanish stopwords from text
+def remove_stopwords(text):
+  stop_words = set(stopwords.words('spanish'))
+  text = text.apply(lambda x: ' '.join(
+      term for term in x.split() if term not in stop_words))
+  return text
 
-for filename in files:
-    df = pd.read_csv(filename,  sep = "\t", header=None, skiprows=1)
-    li.append(df)
+#Creating Bag of Words for the messages data
+def count_words(text):
+    all_words = []
+    word_counts = []
+    for word in text:
+        words = word_tokenize(word)
+        for w in words:
+            all_words.append(w)
+    word_counts = Counter(all_words)
+    return word_counts
 
-df = pd.concat(li)
+# The find_features function will determine which of the 1500 word features are contained in the review.
+def find_features(message):
+    words = word_tokenize(message)
+    features = {}
+    for word in w_features:
+        features[word] = (word in words)
 
-df.columns = ['id', 'Tweet', 'AffectDimension', 'IntensityScore']
-df = df.drop(columns=['id', 'IntensityScore'])
+    return features
 
-df['Tweet'] = remove_stop_words(df['Tweet'])
-df['Tweet'] = tokenize(df['Tweet'])
+#Read the dataset
+data = pd.read_csv('data.csv', header=None, skiprows=1)
+tweets = data[0]
+Y = data[1]
 
-le = LabelEncoder()
+tweets = tweets.apply(clean_text)
 
-df = df.apply(lambda col: le.fit_transform(col.astype(str)), axis=0, result_type='expand')
+#lemmatizing using wordnet lemmatizer
+lemmatizer = WordNetLemmatizer()
+tweets = tweets.apply(lambda x: ' '.join(lemmatizer.lemmatize(term) for term in x.split()))
 
-#label encode the values before passing the features in the dataset.
-for i in range(2):
-   df.iloc[:,i] = le.fit_transform(df.iloc[:,i])
+word_counts = count_words(tweets)
 
-X = df['Tweet']
-y = df['AffectDimension']
-
-
-
-X_train, X_test, y_train, y_test = train_test_split(X, y,  test_size = 0.2, stratify=y)
-
-
-#create new a knn model
-knn = KNeighborsClassifier()
-
-#create a dictionary of all values we want to test for n_neighbors
-params_knn = {'n_neighbors': np.arange(15, 25), 'algorithm': ['auto'], 'leaf_size': np.arange(1, 18), 'p': [1,2], 'n_jobs': [-1], 'weights': ['uniform', 'distance']}
-
-#use gridsearch to test all values for n_neighbors
-knn_gs = GridSearchCV(knn, params_knn, cv=5)
-
-# convert x into 2D matrix
-X_train = X_train.values.reshape(-1, 1)
-X_test = X_test.values.reshape(-1,1)
-
-
-knn_gs.fit(X_train, y_train)
-
-knn_best = knn_gs.best_estimator_
-y_true, y_pred = y_test, knn_gs.predict(X_test)
-print("-------------K-Neighbords-------------")
-print(knn_gs.best_params_)
-print(knn_gs.best_score_)
-print(classification_report(y_true, y_pred))
+#Using the 1000 most common words as features.
+w_features = list(word_counts.keys())[:1000]
 
 
-#create a new random forest classifier
-rf = RandomForestClassifier()
-#create a dictionary of all values we want to test for n_estimators
-params_rf = {'n_estimators': [50, 100, 200]}
+features = list(zip(tweets, Y))
+seed = 1
+np.random.seed = seed
+np.random.shuffle(features)
+feature_set=[]
+for (x,y) in features:
+  feature_set.append((find_features(x), y))
 
-rf_gs = GridSearchCV(rf, params_rf, cv=5)
-rf_gs.fit(X_train, y_train)
+# spliting feature set into training data and testing datas
+train_data, test_data = model_selection.train_test_split(feature_set, test_size = 0.2, random_state=seed)
 
-rf_best = rf_gs.best_estimator_
-y_true, y_pred = y_test, rf_gs.predict(X_test)
-print("-------------Random Forest-------------")
-print(rf_gs.best_params_)
-print(rf_gs.best_score_)
-print(classification_report(y_true, y_pred))
+# Defining all the models to train
 
+#OPTION 1
+#model_classifier = [ KNeighborsClassifier(), DecisionTreeClassifier(), SGDClassifier(max_iter = 100), MultinomialNB(), SVC(kernel = 'linear')]
+#model_name = ["K Nearest Neighbors", "Decision Tree", "SGD Classifier", "Naive Bayes", "SVM Linear"]
 
-#create a new logistic regression model
-log_reg = LogisticRegression()
-log_reg.fit(X_train, y_train)
+#OPTION 2
+model_classifier = [RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=2, random_state=0), LinearSVC(C=0.2, dual=False, max_iter=300),
+SGDClassifier(max_iter = 100), MultinomialNB(), SVC(kernel = 'linear')]
+model_name = ["Random forest", "LinearSVC", "SGDClassifier",  "Naive Bayes", "SVM Linear"]
 
-y_true, y_pred = y_test, log_reg.predict(X_test)
-print("-------------Logistic Regresion-------------")
-print(classification_report(y_true, y_pred))
+all_models = list(zip(model_name, model_classifier))
 
-print("-------------Accuracy scores-------------")
-print('knn: {}'.format(knn_best.score(X_test, y_test)))
-print('rf: {}'.format(rf_best.score(X_test, y_test)))
-print('log_reg: {}'.format(log_reg.score(X_test, y_test)))
+for model_name, model_classifier in all_models:
+    nltk_model = SklearnClassifier(model_classifier)
+    nltk_model.train(train_data)
+    accuracy = nltk.classify.accuracy(nltk_model, test_data)*100
+    print("{} Accuracy: {}".format(model_name, accuracy))
 
+# Voting classifier
+nltk_ensemble = SklearnClassifier(VotingClassifier(estimators = all_models, voting = 'hard', n_jobs = -1))
+nltk_ensemble.train(train_data)
+accuracy = nltk.classify.accuracy(nltk_ensemble, test_data)*100
+print("Voting Classifier Accuracy: {}".format(accuracy))
 
-#create a dictionary of our models
-estimators=[('knn', knn_best), ('rf', rf_best), ('log_reg', log_reg)]
-#create our voting classifier, inputting our models
-ensemble = VotingClassifier(estimators, voting='hard')
+txtfeatures, labels = zip(*test_data)
+prediction = nltk_ensemble.classify_many(txtfeatures)
 
-ensemble.fit(X_train, y_train)
-print("--------------Ensemble------------")
-print('ensemble: {}'.format(ensemble.score(X_test, y_test)))
+# print a classification report
+print(classification_report(labels, prediction))
+confusionmatrix= pd.DataFrame(confusion_matrix(labels, prediction), index = [['actual', 'actual', 'actual', 'actual'], ['0', '1', '2', '3']], columns = [['predicted','predicted','predicted', 'predicted'], ['0', '1', '2', '3']])
+print(confusionmatrix)
