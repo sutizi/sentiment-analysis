@@ -8,90 +8,97 @@ from nltk.corpus import stopwords
 from nltk import TweetTokenizer
 from nltk.stem import SnowballStemmer
 from string import punctuation
+import string
+import re
 
-# Palabra del lexico y su clasificacion
-
-
-class Palabra:
-        def __init__(self, palabra, anger, fear, joy, sadness):
-                self.palabra = palabra
+#lexicon word and its classification
+class word:
+        def __init__(self, word, anger, fear, joy, sadness):
+                self.word = word
                 self.anger = anger
                 self.fear = fear
                 self.joy = joy
                 self.sadness = sadness
 
         def print(self):
-                print("Palabra " + self.palabra + " Anger" + str(self.anger), " Fear" +
+                print("word " + self.word + " Anger" + str(self.anger), " Fear" +
                       str(self.fear) + " Joy" + str(self.joy) + " Sadness" + str(self.sadness))
 
+#Define weigth for words and emojis
+WEIGTH_WORD = 1.0
+WEIGTH_EMOJI = 0.2
 
-def cargar_palabras():
+#Make text lowercase, remove text in square brackets, remove punctuation and remove words containing numbers.
+def clean_text(text):
+    text = re.sub(r'\w*\d\w*', '', text)
+    text = re.sub(r'\w*\f\w*', '', text)
+    text = re.sub(r'\(.*?\)', '', text)
+    text = re.sub(r'\[.*]\)', '', text)
+    text = text.lower()
+    text = re.sub('[‘’“”…]', '', text)
+    text = re.sub('\n', '', text)
+    text = re.sub('\t', '', text)
+    text = re.sub('[%s]' % re.escape(string.punctuation), '', text)
+    return text
+
+
+def load_words():
         direc = "lexico/"
-        archivo = direc + 'palabras_clasficacion.txt'
-        clasificacion = []
-        fp = open(archivo, "r")
-        lineas = fp.readlines()[1:]
-        for x in lineas:
+        file = direc + 'palabras_clasficacion.txt'
+        clasification = []
+        fp = open(file, "r")
+        lines = fp.readlines()[1:]
+        for x in lines:
                 l = x.split('\t')
-                # [palabra, anger, fear, joy, sadness]
+                # [word, anger, fear, joy, sadness]
                 if (l[4] != '0' or l[7] != '0' or l[8] != '0' or l[9] != '0'):
-                        s = stemmer.stem(l[1])
-                        clasificacion.append(Palabra(s, int(l[4]), int(l[7]), int(l[8]), int(l[9])))
+                        s = stemmer.stem(l[0])
+                        clasification.append(word(s, int(l[4]), int(l[7]), int(l[8]), int(l[9])))
         fp.close()
-        return clasificacion
+        return clasification
 
 
-def cargar_emojis():
+def load_emojis():
         direc = "lexico/"
-        archivo = direc + 'emojis_clasificacion.txt'
-        clasificacion = []
-        fp = open(archivo, "r")
-        lineas = fp.readlines()[1:]
-        for x in lineas:
+        file = direc + 'emojis_clasificacion.txt'
+        clasification = []
+        fp = open(file, "r")
+        lines = fp.readlines()[1:]
+        for x in lines:
                 l = x.split('\t')
-                # [palabra, anger, fear, joy, sadness]
+                # [word, anger, fear, joy, sadness]
                 if (l[4] != '0' or l[7] != '0' or l[8] != '0' or l[9] != '0'):
-                        clasificacion.append(
-                            Palabra(l[0], int(l[4]), int(l[7]), int(l[8]), int(l[9])))
+                        clasification.append(
+                            word(l[0], int(l[4]), int(l[7]), int(l[8]), int(l[9])))
         fp.close()
-        return clasificacion
+        return clasification
 
 
-def cargar_twitts():
-        direc = "data_set/"
+def load_twetts():
+        direc = "data_set_eng/"
         files = os.listdir(direc)
-        archivos = [direc + twitt for twitt in files]
-        twitts = []
-        for a in archivos:
+        files = [direc + twitt for twitt in files]
+        twetts = []
+        for a in files:
                 fp = open(a, "r")
-                lineas = fp.readlines()[1:]
-                for x in lineas:
-                        palabras = ''.join([c for c in x.split('\t')[1] if c not in non_words])
+                lines = fp.readlines()[1:]
+                for x in lines:
+                        words = ''.join([c for c in x.split('\t')[1] if c not in non_words])
+                        words = clean_text(words)
                         tt = TweetTokenizer()
-                        twitt = tt.tokenize(palabras)
-                        twitts.append([twitt, x.split('\t')[2]])
+                        twitt = tt.tokenize(words)
+                        twetts.append([twitt, x.split('\t')[2]])
         fp.close()
 
-        return twitts
-
-# Stems
-
-
-spanish_stopwords = stopwords.words('spanish')
-stemmer = SnowballStemmer('spanish', ignore_stopwords=True)
-non_words = list(punctuation)
-non_words.extend(['¿', '¡'])
-non_words.extend(map(str, range(10)))
-
+        return twetts
 
 def stem_tokens(tokens, stemmer):
-    stemmed = []
-    for item in tokens:
-        stemmed.append(stemmer.stem(item))
-    return stemmed
+        stemmed = []
+        for item in tokens:
+                stemmed.append(stemmer.stem(item))
+        return stemmed
 
-
-def switch_sentimiento(arg):
+def switch_sentiment(arg):
     switcher = {
         0: "anger",
                 1: "fear",
@@ -100,72 +107,73 @@ def switch_sentimiento(arg):
     }
     return switcher.get(arg, "Err")
 
-
 if __name__ == "__main__":
 
-    palabras = cargar_palabras()
-    emojis = cargar_emojis()
-    twitts = cargar_twitts()
+    spanish_stopwords = stopwords.words('english')
+    stemmer = SnowballStemmer('english', ignore_stopwords=True)
+    non_words = list(punctuation)
+    non_words.extend(['¿', '¡'])
+    non_words.extend(map(str, range(10)))
 
-    # Cantidad de twitts clasificados correctamente
-    correctos = 0
-        # Cantidad de twitts clasificados incorrectamente
-    incorrectos = 0
-    # Cantidad total de palabras
-    cant_palabras = 0
-    # Cantidad de palabras que no se pudieron clasificar
-    no_clasificada = 0
+    words = load_words()
+    emojis = load_emojis()
+    twetts = load_twetts()
 
-    # Tweets --> [ [[p1, p2, ...], sent] ... ]
-    for t in twitts:
+    # number of correctly classified tweets
+    correct = 0
+        #number of misclassified tweets
+    incorrect = 0
+    #number of words
+    cant_words = 0
+    # number of words that could not be classified
+    not_classified = 0
+
+    for t in twetts:
         ps = stem_tokens(t[0], stemmer)
-        # Contiene la calsificacion de todas las palabras del twitt
         #[anger, fear, joy, sadness]
-        p_clasificacion = [0, 0, 0, 0]
+        p_clasification = [0, 0, 0, 0]
 
-        # ps palabras de un tweet
         for p in ps:
-                cant_palabras += 1
-                c = [x for x in palabras if x.palabra == p]
+                cant_words += 1
+                c = [x for x in words if x.word == p]
                 if c:
-                    # Si encontre la palabra en la lista de palabras actualizo los contadores
-                    p_clasificacion[0] += c[0].anger
-                    p_clasificacion[1] += c[0].fear
-                    p_clasificacion[2] += c[0].joy
-                    p_clasificacion[3] += c[0].sadness
+                    # If I found the word in the word lexicon I update the weight counters
+                    p_clasification[0] += c[0].anger
+                    p_clasification[1] += c[0].fear
+                    p_clasification[2] += c[0].joy
+                    p_clasification[3] += c[0].sadness
                 else:
-                    c = [x for x in emojis if x.palabra == p]
+                    c = [x for x in emojis if x.word == p]
                     if c:
-                        # Si encontre la palabra en la lista de emojis actualizo los contadores por el doble de una palabra
-                        p_clasificacion[0] += c[0].anger *0.2
-                        p_clasificacion[1] += c[0].fear *0.2
-                        p_clasificacion[2] += c[0].joy *0.2
-                        p_clasificacion[3] += c[0].sadness *0.2
+                        # If I found the word in the emoji lexicon I update the weight counters
+                        p_clasification[0] += c[0].anger 
+                        p_clasification[1] += c[0].fear 
+                        p_clasification[2] += c[0].joy 
+                        p_clasification[3] += c[0].sadness
                     else:
-                        no_clasificada += 1
-                # Determino el sentimiento del twitt
-                # Retornando el maximo contador
-                indice = np.where(p_clasificacion == np.amax(p_clasificacion))[0]
-                resultado = "sadness"
-                if p_clasificacion[0] >= p_clasificacion[1] and p_clasificacion[0] > p_clasificacion[2] and p_clasificacion[0] > p_clasificacion[3]:
-                        resultado = "anger"
-                elif p_clasificacion[1] >= p_clasificacion[2] and p_clasificacion[1] > p_clasificacion[3]:
-                        resultado = "fear"
-                elif p_clasificacion[2] >= p_clasificacion[3]:
+                        not_classified += 1
+                # determine the sentiment of the tweet, returning the maximum counter
+                indice = np.where(p_clasification == np.amax(p_clasification))[0]
+                result = "sadness"
+                if p_clasification[0] >= p_clasification[1] and p_clasification[0] > p_clasification[2] and p_clasification[0] > p_clasification[3]:
+                        result = "anger"
+                elif p_clasification[1] >= p_clasification[2] and p_clasification[1] > p_clasification[3]:
+                        result = "fear"
+                elif p_clasification[2] >= p_clasification[3]:
                         reultado = "joy"
-
-        resultado = switch_sentimiento(indice[0])
-
-        # Si el resultado calculado coincide con el del data set
-        if (resultado == t[1]):
-                correctos += 1
+                
+        result = switch_sentiment(indice[0])
+        # If the calculated result matches that of the data set
+        if (result == t[1]):
+                correct += 1
         else:
-                incorrectos += 1
+                incorrect += 1
+                
     print("------------------------------------------------------------")
-    print("De " + str(len(twitts)) + " twitts analizados") 
-    print("correctos: " + str(correctos))
-    print("incorrectos: " + str(incorrectos))
+    print(str(len(twetts)) + " tweets analyzed") 
+    print("correct: " + str(correct))
+    print("incorrect: " + str(incorrect))
     print("------------------------------------------------------------")
-    print("Total palabras: " + str(cant_palabras))
-    print("Palabras no clasificadas: " + str(no_clasificada))
+    print("Total words: " + str(cant_words))
+    print("words not clasified: " + str(not_classified))
     print("------------------------------------------------------------")
