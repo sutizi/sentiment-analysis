@@ -21,11 +21,9 @@ from sklearn import model_selection
 from sklearn.tree import DecisionTreeClassifier
 from sklearn. ensemble import RandomForestClassifier, BaggingClassifier, AdaBoostClassifier, VotingClassifier
 from sklearn.svm import LinearSVC
-from sklearn.neural_network import MLPClassifier
 
-
+#Make text lowercase, remove text in square brackets, remove punctuation and remove words containing numbers.
 def clean_text(text):
-    '''Make text lowercase, remove text in square brackets, remove punctuation and remove words containing numbers.'''
     text = re.sub(r'\w*\d\w*', '', text)
     text = re.sub(r'\w*\f\w*', '', text)
     text = re.sub(r'\(.*?\)', '', text)
@@ -95,13 +93,13 @@ train_data, test_data = model_selection.train_test_split(feature_set, test_size 
 # Defining all the models to train
 
 #OPTION 1
-#model_classifier = [ KNeighborsClassifier(), DecisionTreeClassifier(), SGDClassifier(max_iter = 100), MultinomialNB(), SVC(kernel = 'linear')]
-#model_name = ["K Nearest Neighbors", "Decision Tree", "SGD Classifier", "Naive Bayes", "SVM Linear"]
+model_classifier = [ KNeighborsClassifier(weights= 'distance'), DecisionTreeClassifier(), SGDClassifier(max_iter = 100), MultinomialNB(), SVC(kernel = 'linear')]
+model_name = ["K Nearest Neighbors", "Decision Tree", "SGD Classifier", "Naive Bayes", "SVM Linear"]
 
 #OPTION 2
-model_classifier = [RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=2, random_state=0), LinearSVC(C=0.2, dual=False, max_iter=300),
-SGDClassifier(max_iter = 100), MultinomialNB(), SVC(kernel = 'linear')]
-model_name = ["Random forest", "LinearSVC", "SGDClassifier",  "Naive Bayes", "SVM Linear"]
+#model_classifier = [RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=2, random_state=0), LinearSVC(C=0.2, dual=False, max_iter=300),
+#SGDClassifier(max_iter = 100), MultinomialNB(), SVC(kernel = 'linear')]
+#model_name = ["Random forest", "LinearSVC", "SGDClassifier",  "Naive Bayes", "SVM Linear"]
 
 all_models = list(zip(model_name, model_classifier))
 
